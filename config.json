@@ -1,0 +1,10 @@
+{
+  "target_price": null,
+  "sites_enabled": {
+    "mercado_livre": true,
+    "kabum": true,
+    "terabyte": true,
+    "amazon": true,
+    "shopee": true
+  }
+}
