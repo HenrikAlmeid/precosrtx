@@ -101,27 +101,33 @@ def parse_price_brl(text):
 # --------------------------------------------------------------------------
 
 def search_mercado_livre():
-    """API pública oficial do Mercado Livre - o mais estável dos 5."""
     results = []
     try:
-        url = "https://api.mercadolibre.com/sites/MLB/search"
-        params = {"q": "RTX 5060 8GB", "limit": 50}
-        r = requests.get(url, params=params, headers=HEADERS, timeout=20)
+        url = "https://lista.mercadolivre.com.br/rtx-5060-8gb"
+        r = requests.get(url, headers=HEADERS, timeout=20)
         r.raise_for_status()
-        data = r.json()
-        for item in data.get("results", []):
-            title = item.get("title", "")
+        soup = BeautifulSoup(r.text, "html.parser")
+        cards = soup.select("li.ui-search-layout__item, div.ui-search-result__wrapper")
+        seen_links = set()
+        for card in cards:
+            link_el = card.select_one("a.ui-search-link, a.ui-search-item__group__element")
+            title_el = card.select_one("h2.ui-search-item__title, h2")
+            price_el = card.select_one("span.andes-money-amount__fraction")
+            if not (link_el and price_el):
+                continue
+            link = link_el.get("href", "")
+            if not link or link in seen_links:
+                continue
+            title = title_el.get_text(strip=True) if title_el else card.get_text(" ", strip=True)
             if not is_valid_title(title):
                 continue
-            price = item.get("price")
-            link = item.get("permalink")
-            if price and link:
-                results.append({
-                    "site": "Mercado Livre",
-                    "title": title,
-                    "price": float(price),
-                    "link": link,
-                })
+            price_text = price_el.get_text(strip=True)
+            try:
+                price = float(price_text.replace(".", "").replace(",", "."))
+            except ValueError:
+                continue
+            results.append({"site": "Mercado Livre", "title": title, "price": price, "link": link})
+            seen_links.add(link)
         print(f"[Mercado Livre] {len(results)} resultados válidos")
     except Exception as e:
         print(f"[Mercado Livre] Erro: {e}")
